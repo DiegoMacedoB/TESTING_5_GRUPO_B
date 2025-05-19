@@ -78,9 +78,9 @@ HTML_TEMPLATE = """
         <div class="form-group">
             <label for="due_date">Fecha vencimiento (YYYY-MM-DD HH:MM):</label>
             <input type="text" id="due_date" name="due_date" 
-                   value="{{ task.due_date.strftime('%Y-%m-%d %H:%M') if task else '' }}" required>
+                   value="{{ task_data.due_date if task_data else (task.due_date.strftime('%Y-%m-%d %H:%M') if task else '') }}" required>
         </div>
-        
+         
         <div class="form-group">
             <label for="priority">Prioridad:</label>
             <select id="priority" name="priority">
@@ -211,30 +211,10 @@ def index():
         task=None,
         form_action=url_for("index"),
         form_title="Agregar Nueva Tarea",
-        task_data=task_data
+        task_data=task_data,
+        order_by=request.args.get("order_by", "due_date"),
+        direction=request.args.get("direction", "asc"),
     )
-
-@app.route('/add', methods=['POST'])
-def add_task():
-    """Agrega una nueva tarea"""
-    title = request.form['title']
-    description = request.form['description']
-    due_date = request.form['due_date']
-    priority = request.form['priority']
-    
-    result = task_manager.add_task(title, description, due_date, priority)
-    
-    if isinstance(result, Task):
-        return redirect(url_for('index', 
-                              message="Tarea creada con éxito", 
-                              message_type="success"))
-    else:
-        return render_template_string(HTML_TEMPLATE,
-                                   tasks=task_manager.get_all_tasks(),
-                                   form_title="Agregar Nueva Tarea",
-                                   form_action=url_for('add_task'),
-                                   message=result,
-                                   message_type="error")
 
 @app.route('/edit/<int:task_id>')
 def edit_task(task_id):
@@ -249,34 +229,48 @@ def edit_task(task_id):
                                tasks=task_manager.get_all_tasks(),
                                task=task,
                                form_title="Editar Tarea",
-                               form_action=url_for('update_task'))
+                               form_action=url_for('update_task'),
+                               message="",
+                               message_type="",
+                               task_data=None,
+                               order_by=request.args.get("order_by", "due_date"),
+                               direction=request.args.get("direction", "asc"),
+                               )
+
 @app.route('/update', methods=['POST'])
 def update_task():
-    """Actualiza una tarea existente sin modificar el estado"""
     task_id = int(request.form['task_id'])
     title = request.form['title']
     description = request.form['description']
     due_date = request.form['due_date']
     priority = request.form['priority']
-    
-    # Solo actualiza los campos básicos (sin estado)
+
     result = task_manager.update_task(
         task_id, title=title, description=description,
         due_date_str=due_date, priority_str=priority
     )
-    
+
     if isinstance(result, str):  # Si hay error
+        task_data = {
+            "title": title,
+            "description": description,
+            "due_date": due_date,
+            "priority": priority
+        }
         return render_template_string(HTML_TEMPLATE,
                                    tasks=task_manager.get_all_tasks(),
                                    task=task_manager.get_task(task_id),
-                                   form_title="Editar Tarea",  
+                                   form_title="Editar Tarea",
                                    form_action=url_for('update_task'),
                                    message=result,
-                                   message_type="error")
+                                   message_type="error",
+                                   task_data=task_data,
+                                   order_by=request.args.get("order_by", "due_date"),
+                                   direction=request.args.get("direction", "asc"),
+                                   )
     
-    return redirect(url_for('index', 
-                          message="Tarea actualizada con éxito", 
-                          message_type="success"))
+    return redirect(url_for('index', message="Tarea actualizada con éxito", message_type="success"))
+
 @app.route('/delete/<int:task_id>')
 def delete_task(task_id):
     """Elimina una tarea"""
@@ -290,6 +284,7 @@ def delete_task(task_id):
         return redirect(url_for('index', 
                               message=result, 
                               message_type="error"))
+
 @app.route('/toggle_task_status/<int:task_id>')
 def toggle_task_status(task_id):
     result = task_manager.toggle_task_status(task_id)
@@ -302,5 +297,6 @@ def toggle_task_status(task_id):
         return redirect(url_for('index', 
                              message=result, 
                              message_type="error"))
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
