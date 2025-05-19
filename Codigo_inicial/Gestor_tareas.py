@@ -69,43 +69,52 @@ class TaskManager:
         self._conn.commit()
 
     def add_task(self, title: str, description: str,
-                 due_date_str: str, priority_str: str) -> Union[str, Task]:
-        if not title or len(title) > self.MAX_TITLE_LENGTH:
-            return f"Error: El título debe tener entre 1 y {self.MAX_TITLE_LENGTH} caracteres."
-        # recortamos espacios y validamos
+                due_date_str: str, priority_str: str) -> Union[str, Task]:
+        # Validaciones básicas
         title = title.strip()
         if not title:
-            return "Error: El título no puede estar vacío ni contener sólo espacios."
+            return "Error: El título no puede estar vacío."
         if len(title) > self.MAX_TITLE_LENGTH:
-            return f"Error: El título debe tener como máximo {self.MAX_TITLE_LENGTH} caracteres."
-        # Verificar si el título ya existe en la base de datos
-        cur = self._conn.execute("SELECT 1 FROM tasks WHERE title = ?", (title,))
-        if cur.fetchone():
-            return "Error: Ya existe una tarea con ese título."
+            return f"Error: El título no puede exceder {self.MAX_TITLE_LENGTH} caracteres."
+
+        # Verificación de duplicados (solo para nuevas tareas)
+        existing_task = self._conn.execute(
+            "SELECT id FROM tasks WHERE LOWER(title) = LOWER(?) AND LOWER(description) = LOWER(?)",
+            (title, description)
+        ).fetchone()
+        
+        if existing_task:
+            return "ERR0R: Ya existe una tarea similar"
         try:
             due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
             priority = Priority[priority_str.upper()]
-            # ---- validación de rango de fecha ----
+            
+            # Validación de fecha
             now = datetime.datetime.now()
-            max_due = now + datetime.timedelta(days=365*2)
             if due_date < now:
-                return "Error: La fecha de vencimiento no puede ser anterior a hoy."
-            if due_date > max_due:
-                return "Error: La fecha de vencimiento no puede superar los 2 años a partir de hoy."
+                return "Error: La fecha no puede ser en el pasado."
+            if due_date > now + datetime.timedelta(days=365*2):
+                return "Error: La fecha no puede ser mayor a 2 años."
+
         except ValueError:
-            return "Error: Formato de fecha incorrecto. Use YYYY-MM-DD HH:MM"
+            return "Error: Formato de fecha inválido (Use YYYY-MM-DD HH:MM)"
         except KeyError:
-            return "Error: Prioridad inválida. Use BAJA, MEDIA o ALTA."
+            return "Error: Prioridad inválida (Use BAJA, MEDIA o ALTA)"
 
-        created_at = datetime.datetime.now().isoformat()
-        cur = self._conn.execute(
-            "INSERT INTO tasks (title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (title, description, due_date.isoformat(), priority.name, TaskStatus.PENDIENTE.name, created_at)
-        )
-        self._conn.commit()
-        task_id = cur.lastrowid
-
-        return self.get_task(task_id)
+        # Insertar nueva tarea
+        try:
+            cur = self._conn.execute(
+                """INSERT INTO tasks 
+                (title, description, due_date, priority, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (title, description, due_date.isoformat(), 
+                priority.name, TaskStatus.PENDIENTE.name,
+                datetime.datetime.now().isoformat())
+            )
+            self._conn.commit()
+            return self.get_task(cur.lastrowid)
+        except sqlite3.Error as e:
+            return f"Error en la base de datos: {str(e)}"
 
     def get_task(self, task_id: int) -> Optional[Task]:
         cur = self._conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
@@ -155,7 +164,6 @@ class TaskManager:
                 updates.append("priority = ?"); params.append(priority_str.upper())
             except KeyError:
                 return "Error: Prioridad inválida. Use BAJA, MEDIA o ALTA."
-
         if not updates:
             return task  
         params.append(task_id)
