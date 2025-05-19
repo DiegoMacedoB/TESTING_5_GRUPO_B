@@ -69,7 +69,7 @@ class TaskManager:
         self._conn.commit()
 
     def add_task(self, title: str, description: str,
-                due_date_str: str, priority_str: str) -> Union[str, Task]:
+             due_date_str: str, priority_str: str) -> Union[str, Task]:
         # Validaciones básicas
         title = title.strip()
         if not title:
@@ -89,10 +89,10 @@ class TaskManager:
             due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
             priority = Priority[priority_str.upper()]
             
-            # Validación de fecha
-            now = datetime.datetime.now()
+            # Validación de fecha: comparar con la hora actual real
+            now = datetime.datetime.now()  # Fecha y hora actual exacta
             if due_date < now:
-                return "Error: La fecha no puede ser en el pasado."
+                return "Error: La fecha no puede ser en el pasado."+str(now)
             if due_date > now + datetime.timedelta(days=365*2):
                 return "Error: La fecha no puede ser mayor a 2 años."
 
@@ -115,6 +115,8 @@ class TaskManager:
             return self.get_task(cur.lastrowid)
         except sqlite3.Error as e:
             return f"Error en la base de datos: {str(e)}"
+
+
 
     def get_task(self, task_id: int) -> Optional[Task]:
         cur = self._conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))

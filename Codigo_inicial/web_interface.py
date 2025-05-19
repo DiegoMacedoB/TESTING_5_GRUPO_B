@@ -11,7 +11,7 @@ app.secret_key = 'supersecretkey'  # Necesario para sesiones Flask
 # Inicializar el gestor de tareas
 task_manager = TaskManager()
 
-# HTML Template mejorado
+# HTML Template mejorado con clase .overdue para subrayado rojo
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -28,6 +28,11 @@ HTML_TEMPLATE = """
         .priority-medium { color: #f39c12; }
         .priority-low { color: #2ecc71; }
         .completed { text-decoration: line-through; color: #95a5a6; }
+        .overdue {
+            text-decoration: underline;
+            text-decoration-color: red;
+            text-decoration-thickness: 2px;
+        }
         .actions a { margin-right: 10px; color: #3498db; text-decoration: none; }
         .actions a:hover { text-decoration: underline; }
         form { background: #f9f9f9; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
@@ -153,12 +158,13 @@ HTML_TEMPLATE = """
         </thead>
         <tbody>
             {% for task in tasks %}
+            {% set is_overdue = task.due_date < now and task.status.name != 'COMPLETADA' %}
             <tr class="{{ 'completed' if task.status.name == 'COMPLETADA' else '' }}">
-                <td>{{ task.title }}</td>
-                <td>{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</td>
-                <td>{{ task.due_date.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td class="priority-{{ task.priority.name.lower() }}">{{ task.priority.name }}</td>
-                <td>{{ task.status.name }}</td>
+                <td class="{{ 'overdue' if is_overdue else '' }}">{{ task.title }}</td>
+                <td class="{{ 'overdue' if is_overdue else '' }}">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</td>
+                <td class="{{ 'overdue' if is_overdue else '' }}">{{ task.due_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="priority-{{ task.priority.name.lower() }} {{ 'overdue' if is_overdue else '' }}">{{ task.priority.name }}</td>
+                <td class="{{ 'overdue' if is_overdue else '' }}">{{ task.status.name }}</td>
                 <td class="actions">
                     <a href="{{ url_for('edit_task', task_id=task.id) }}">Editar</a>
                     <a href="{{ url_for('toggle_task_status', task_id=task.id) }}" 
@@ -203,6 +209,7 @@ def index():
             message_type = "success"
 
     tasks = task_manager.get_all_tasks()
+    now = datetime.datetime.now()  # Fecha y hora actual exacta
     return render_template_string(
         HTML_TEMPLATE,
         tasks=tasks,
@@ -214,7 +221,9 @@ def index():
         task_data=task_data,
         order_by=request.args.get("order_by", "due_date"),
         direction=request.args.get("direction", "asc"),
+        now=now  # <-- pasar para comparación en la plantilla
     )
+
 
 @app.route('/edit/<int:task_id>')
 def edit_task(task_id):
@@ -225,6 +234,7 @@ def edit_task(task_id):
                               message=f"No se encontró la tarea con ID {task_id}", 
                               message_type="error"))
     
+    now = datetime.datetime.now()
     return render_template_string(HTML_TEMPLATE,
                                tasks=task_manager.get_all_tasks(),
                                task=task,
@@ -235,6 +245,7 @@ def edit_task(task_id):
                                task_data=None,
                                order_by=request.args.get("order_by", "due_date"),
                                direction=request.args.get("direction", "asc"),
+                               now=now
                                )
 
 @app.route('/update', methods=['POST'])
@@ -257,6 +268,7 @@ def update_task():
             "due_date": due_date,
             "priority": priority
         }
+        now = datetime.datetime.now()
         return render_template_string(HTML_TEMPLATE,
                                    tasks=task_manager.get_all_tasks(),
                                    task=task_manager.get_task(task_id),
@@ -267,6 +279,7 @@ def update_task():
                                    task_data=task_data,
                                    order_by=request.args.get("order_by", "due_date"),
                                    direction=request.args.get("direction", "asc"),
+                                   now=now
                                    )
     
     return redirect(url_for('index', message="Tarea actualizada con éxito", message_type="success"))
