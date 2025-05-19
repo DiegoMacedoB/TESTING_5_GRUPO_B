@@ -67,12 +67,12 @@ HTML_TEMPLATE = """
         
         <div class="form-group">
             <label for="title">Título:</label>
-            <input type="text" id="title" name="title" value="{{ task.title if task else '' }}" required maxlength="50">
+            <input type="text" id="title" name="title" value="{{ task_data.title if task_data else (task.title if task else '') }}">
         </div>
         
         <div class="form-group">
             <label for="description">Descripción:</label>
-            <textarea id="description" name="description">{{ task.description if task else '' }}</textarea>
+            <textarea id="description" name="description">{{ task_data.description if task_data else (task.description if task else '') }}</textarea>
         </div>
         
         <div class="form-group">
@@ -84,9 +84,16 @@ HTML_TEMPLATE = """
         <div class="form-group">
             <label for="priority">Prioridad:</label>
             <select id="priority" name="priority">
-                <option value="BAJA" {{ 'selected' if task and task.priority.name == 'BAJA' else '' }}>Baja</option>
-                <option value="MEDIA" {{ 'selected' if task and task.priority.name == 'MEDIA' else '' }}>Media</option>
-                <option value="ALTA" {{ 'selected' if task and task.priority.name == 'ALTA' else '' }}>Alta</option>
+                {% for level in ['BAJA', 'MEDIA', 'ALTA'] %}
+                    <option value="{{ level }}" 
+                        {% if task_data and task_data.priority == level %}
+                            selected
+                        {% elif task and task.priority.name == level %}
+                            selected
+                        {% endif %}>
+                        {{ level.capitalize() }}
+                    </option>
+                {% endfor %}
             </select>
         </div>
         
