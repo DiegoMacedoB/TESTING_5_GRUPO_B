@@ -37,7 +37,12 @@ HTML_TEMPLATE = """
             width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; 
             box-sizing: border-box; margin-bottom: 10px; 
         }
-        textarea { height: 100px; }
+        textarea { 
+            height: 100px; 
+            min-height: 100px;
+            resize: none;
+            overflow: auto;
+        }
         button { 
             background-color: #4CAF50; color: white; padding: 10px 15px; 
             border: none; border-radius: 4px; cursor: pointer; 

@@ -72,6 +72,12 @@ class TaskManager:
                  due_date_str: str, priority_str: str) -> Union[str, Task]:
         if not title or len(title) > self.MAX_TITLE_LENGTH:
             return f"Error: El título debe tener entre 1 y {self.MAX_TITLE_LENGTH} caracteres."
+        # recortamos espacios y validamos
+        title = title.strip()
+        if not title:
+            return "Error: El título no puede estar vacío ni contener sólo espacios."
+        if len(title) > self.MAX_TITLE_LENGTH:
+            return f"Error: El título debe tener como máximo {self.MAX_TITLE_LENGTH} caracteres."
         try:
             due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
             priority = Priority[priority_str.upper()]
@@ -106,10 +112,14 @@ class TaskManager:
                     description: str = None, due_date_str: str = None,
                     priority_str: str = None) -> Union[str, Task]:
         task = self.get_task(task_id)
+        # recortamos espacios y validamos
+        title = title.strip()
+        if not title:
+            return "Error: El título no puede estar vacío ni contener sólo espacios."
+        if len(title) > self.MAX_TITLE_LENGTH:
+            return f"Error: El título debe tener como máximo {self.MAX_TITLE_LENGTH} caracteres."
         if not task:
             return f"Error: No se encontró una tarea con ID {task_id}"
-
-        # validaciones y construcción dinámica de SET
         updates, params = [], []
         if title is not None:
             if not title or len(title) > self.MAX_TITLE_LENGTH:
@@ -137,7 +147,7 @@ class TaskManager:
                 return "Error: Prioridad inválida. Use BAJA, MEDIA o ALTA."
 
         if not updates:
-            return task  # nada que actualizar
+            return task  
         params.append(task_id)
         sql = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
         self._conn.execute(sql, params)
