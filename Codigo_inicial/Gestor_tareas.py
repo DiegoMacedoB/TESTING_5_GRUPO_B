@@ -75,6 +75,13 @@ class TaskManager:
         try:
             due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
             priority = Priority[priority_str.upper()]
+            # ---- validación de rango de fecha ----
+            now = datetime.datetime.now()
+            max_due = now + datetime.timedelta(days=365*2)
+            if due_date < now:
+                return "Error: La fecha de vencimiento no puede ser anterior a hoy."
+            if due_date > max_due:
+                return "Error: La fecha de vencimiento no puede superar los 2 años a partir de hoy."
         except ValueError:
             return "Error: Formato de fecha incorrecto. Use YYYY-MM-DD HH:MM"
         except KeyError:
