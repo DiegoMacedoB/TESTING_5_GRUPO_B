@@ -78,6 +78,10 @@ class TaskManager:
             return "Error: El título no puede estar vacío ni contener sólo espacios."
         if len(title) > self.MAX_TITLE_LENGTH:
             return f"Error: El título debe tener como máximo {self.MAX_TITLE_LENGTH} caracteres."
+        # Verificar si el título ya existe en la base de datos
+        cur = self._conn.execute("SELECT 1 FROM tasks WHERE title = ?", (title,))
+        if cur.fetchone():
+            return "Error: Ya existe una tarea con ese título."
         try:
             due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
             priority = Priority[priority_str.upper()]
@@ -120,6 +124,12 @@ class TaskManager:
             return f"Error: El título debe tener como máximo {self.MAX_TITLE_LENGTH} caracteres."
         if not task:
             return f"Error: No se encontró una tarea con ID {task_id}"
+        # Verificar si el título ya existe en otra tarea
+        cur = self._conn.execute(
+            "SELECT 1 FROM tasks WHERE title = ? AND id != ?", (title, task_id)
+        )
+        if cur.fetchone():
+            return "Error: Ya existe otra tarea con ese título."
         updates, params = [], []
         if title is not None:
             if not title or len(title) > self.MAX_TITLE_LENGTH:

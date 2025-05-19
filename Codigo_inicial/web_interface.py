@@ -176,22 +176,43 @@ HTML_TEMPLATE = """
 </html>
 """
 
-@app.route('/')
+@app.route("/", methods=["GET", "POST"])
 def index():
-    """Página principal que muestra todas las tareas"""
-    order_by = request.args.get('order_by', 'due_date')
-    direction = request.args.get('direction', 'asc')
-    tasks = task_manager.get_all_tasks(order_by=order_by, direction=direction)
-    message = request.args.get('message')
-    message_type = request.args.get('message_type')
-    return render_template_string(HTML_TEMPLATE, 
-                                tasks=tasks,
-                                form_title="Agregar Nueva Tarea",
-                                form_action=url_for('add_task'),
-                                message=message,
-                                message_type=message_type,
-                                order_by=order_by,
-                                direction=direction)
+    message = ""
+    message_type = ""
+    task_data = None
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        due_date = request.form.get("due_date", "").strip()
+        priority = request.form.get("priority", "").strip()
+
+        result = task_manager.add_task(title, description, due_date, priority)
+        if isinstance(result, str):
+            message = result
+            message_type = "error"
+            task_data = {
+                "title": title,
+                "description": description,
+                "due_date": due_date,
+                "priority": priority
+            }
+        else:
+            message = "Tarea agregada correctamente."
+            message_type = "success"
+
+    tasks = task_manager.get_all_tasks()
+    return render_template_string(
+        HTML_TEMPLATE,
+        tasks=tasks,
+        message=message,
+        message_type=message_type,
+        task=None,
+        form_action=url_for("index"),
+        form_title="Agregar Nueva Tarea",
+        task_data=task_data
+    )
 
 @app.route('/add', methods=['POST'])
 def add_task():
