@@ -161,9 +161,15 @@ class TaskManager:
         self._conn.commit()
         return True
 
-    def get_all_tasks(self) -> List[Task]:
-        cur = self._conn.execute("SELECT * FROM tasks ORDER BY due_date ASC")
-        return [Task.from_row(row) for row in cur.fetchall()]
+    def get_all_tasks(self, order_by: str = "due_date", direction: str = "asc") -> List[Task]:
+            valid_columns = {"id", "title", "description", "due_date", "priority", "status", "created_at"}
+            if order_by not in valid_columns:
+                order_by = "due_date"
+            if direction.lower() not in {"asc", "desc"}:
+                direction = "asc"
+            sql = f"SELECT * FROM tasks ORDER BY {order_by} {direction.upper()}"
+            cur = self._conn.execute(sql)
+            return [Task.from_row(row) for row in cur.fetchall()]
 
     def __del__(self):
         self._conn.close()

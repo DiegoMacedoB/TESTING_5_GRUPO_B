@@ -37,12 +37,7 @@ HTML_TEMPLATE = """
             width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; 
             box-sizing: border-box; margin-bottom: 10px; 
         }
-        textarea { 
-            height: 100px; 
-            min-height: 100px;
-            resize: none;
-            overflow: auto;
-        }
+        textarea { height: 100px; }
         button { 
             background-color: #4CAF50; color: white; padding: 10px 15px; 
             border: none; border-radius: 4px; cursor: pointer; 
@@ -101,11 +96,46 @@ HTML_TEMPLATE = """
     <table>
         <thead>
             <tr>
-                <th>Título</th>
-                <th>Descripción</th>
-                <th>Vencimiento</th>
-                <th>Prioridad</th>
-                <th>Estado</th>
+                <th>
+                    <a href="{{ url_for('index', order_by='title', direction='desc' if order_by == 'title' and direction == 'asc' else 'asc') }}">
+                        Título
+                        {% if order_by == 'title' %}
+                            {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="{{ url_for('index', order_by='description', direction='desc' if order_by == 'description' and direction == 'asc' else 'asc') }}">
+                        Descripción
+                        {% if order_by == 'description' %}
+                            {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="{{ url_for('index', order_by='due_date', direction='desc' if order_by == 'due_date' and direction == 'asc' else 'asc') }}">
+                        Vencimiento
+                        {% if order_by == 'due_date' %}
+                            {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="{{ url_for('index', order_by='priority', direction='desc' if order_by == 'priority' and direction == 'asc' else 'asc') }}">
+                        Prioridad
+                        {% if order_by == 'priority' %}
+                            {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="{{ url_for('index', order_by='status', direction='desc' if order_by == 'status' and direction == 'asc' else 'asc') }}">
+                        Estado
+                        {% if order_by == 'status' %}
+                            {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -137,7 +167,9 @@ HTML_TEMPLATE = """
 @app.route('/')
 def index():
     """Página principal que muestra todas las tareas"""
-    tasks = task_manager.get_all_tasks()
+    order_by = request.args.get('order_by', 'due_date')
+    direction = request.args.get('direction', 'asc')
+    tasks = task_manager.get_all_tasks(order_by=order_by, direction=direction)
     message = request.args.get('message')
     message_type = request.args.get('message_type')
     return render_template_string(HTML_TEMPLATE, 
@@ -145,7 +177,9 @@ def index():
                                 form_title="Agregar Nueva Tarea",
                                 form_action=url_for('add_task'),
                                 message=message,
-                                message_type=message_type)
+                                message_type=message_type,
+                                order_by=order_by,
+                                direction=direction)
 
 @app.route('/add', methods=['POST'])
 def add_task():
