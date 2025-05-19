@@ -120,8 +120,12 @@ class TaskManager:
         if due_date_str is not None:
             try:
                 new_due = datetime.datetime.strptime(due_date_str, "%Y-%m-%d %H:%M")
-                if new_due < datetime.datetime.now():
-                    return "Error: La fecha de vencimiento no puede ser en el pasado"
+                now = datetime.datetime.now()
+                max_due = now + datetime.timedelta(days=365*2)
+                if new_due < now:
+                    return "Error: La fecha de vencimiento no puede ser anterior a hoy."
+                if new_due > max_due:
+                    return "Error: La fecha de vencimiento no puede superar los 2 años a partir de hoy."
                 updates.append("due_date = ?"); params.append(new_due.isoformat())
             except ValueError:
                 return "Error: Formato de fecha incorrecto. Use YYYY-MM-DD HH:MM"
@@ -134,7 +138,6 @@ class TaskManager:
 
         if not updates:
             return task  # nada que actualizar
-
         params.append(task_id)
         sql = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
         self._conn.execute(sql, params)
